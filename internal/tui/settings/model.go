@@ -1,11 +1,11 @@
 package settings
 
 import (
-	"github.com/charmbracelet/huh"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 
-	"github.com/gabri/pprof-analyzer/internal/config"
-	"github.com/gabri/pprof-analyzer/internal/tui/styles"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/config"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/styles"
 )
 
 // BackMsg navigates back to the main menu.
@@ -14,45 +14,51 @@ type BackMsg struct{}
 // SavedMsg is emitted when settings are saved.
 type SavedMsg struct{}
 
-// Model is the Bubble Tea model for the settings screen.
-type Model struct {
-	form       *huh.Form
-	cfg        *config.Config
-	errorMsg   string
+// settingsData holds form field values on the heap so that huh's Value() pointers
+// remain stable across Bubble Tea model copies.
+type settingsData struct {
 	apiURL     string
 	model      string
 	reportsDir string
 }
 
+// Model is the Bubble Tea model for the settings screen.
+type Model struct {
+	form     *huh.Form
+	cfg      *config.Config
+	errorMsg string
+	data     *settingsData
+}
+
 // New creates a settings model pre-filled from the current config.
 func New(cfg *config.Config) Model {
-	m := Model{
-		cfg:        cfg,
+	data := &settingsData{
 		apiURL:     cfg.Ollama.APIURL,
 		model:      cfg.Ollama.Model,
 		reportsDir: cfg.Storage.ReportsDir,
 	}
-	m.form = buildForm(&m)
+	m := Model{cfg: cfg, data: data}
+	m.form = buildForm(data)
 	return m
 }
 
-func buildForm(m *Model) *huh.Form {
+func buildForm(data *settingsData) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Ollama API URL").
 				Description("e.g. http://localhost:11434").
-				Value(&m.apiURL),
+				Value(&data.apiURL),
 
 			huh.NewInput().
 				Title("Ollama Model").
 				Description("e.g. llama3.3:70b or qwen2.5-coder:32b").
-				Value(&m.model),
+				Value(&data.model),
 
 			huh.NewInput().
 				Title("Reports Directory").
 				Description("Where PDF reports will be saved").
-				Value(&m.reportsDir),
+				Value(&data.reportsDir),
 		),
 	)
 }
@@ -98,8 +104,8 @@ func (m Model) View() string {
 }
 
 func (m *Model) save() error {
-	m.cfg.Ollama.APIURL = m.apiURL
-	m.cfg.Ollama.Model = m.model
-	m.cfg.Storage.ReportsDir = m.reportsDir
+	m.cfg.Ollama.APIURL = m.data.apiURL
+	m.cfg.Ollama.Model = m.data.model
+	m.cfg.Storage.ReportsDir = m.data.reportsDir
 	return m.cfg.Save()
 }

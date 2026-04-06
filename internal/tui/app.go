@@ -3,13 +3,13 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/gabri/pprof-analyzer/internal/app"
-	"github.com/gabri/pprof-analyzer/internal/config"
-	"github.com/gabri/pprof-analyzer/internal/tui/daemon"
-	"github.com/gabri/pprof-analyzer/internal/tui/dashboard"
-	"github.com/gabri/pprof-analyzer/internal/tui/endpoints"
-	"github.com/gabri/pprof-analyzer/internal/tui/menu"
-	"github.com/gabri/pprof-analyzer/internal/tui/settings"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/app"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/config"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/daemon"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/dashboard"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/endpoints"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/menu"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/settings"
 )
 
 type screen int
@@ -29,19 +29,19 @@ type AppModel struct {
 	current screen
 
 	// sub-models
-	menu          menu.Model
-	endpointList  endpoints.ListModel
-	endpointForm  endpoints.FormModel
+	menu            menu.Model
+	endpointList    endpoints.ListModel
+	endpointForm    endpoints.FormModel
 	endpointConfirm endpoints.ConfirmModel
-	daemonView    daemon.Model
-	dashboardView dashboard.Model
-	settingsView  settings.Model
+	daemonView      daemon.Model
+	dashboardView   dashboard.Model
+	settingsView    settings.Model
 
 	// services
-	endpointSvc  *app.EndpointService
-	daemonSvc    *app.DaemonService
-	metadata     app.MetadataStore
-	cfg          *config.Config
+	endpointSvc *app.EndpointService
+	daemonSvc   *app.DaemonService
+	metadata    app.MetadataStore
+	cfg         *config.Config
 }
 
 // New creates the root AppModel and wires all sub-models.
@@ -78,21 +78,79 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
+	// Navigation messages from sub-models are handled here before routing to
+	// the current screen, so commands are never executed speculatively.
+	switch msg := msg.(type) {
+	case menu.NavigateTo:
+		return m.handleMenuNav(msg.Screen)
+
+	case endpoints.ShowFormMsg:
+		m.endpointForm = endpoints.NewFormModel(m.endpointSvc, msg.Endpoint)
+		m.current = screenEndpointForm
+		return m, m.endpointForm.Init()
+
+	case endpoints.ShowConfirmMsg:
+		m.endpointConfirm = endpoints.NewConfirmModel(m.endpointSvc, msg.Endpoint)
+		m.current = screenEndpointConfirm
+		return m, nil
+
+	case endpoints.BackMsg:
+		if m.current == screenEndpoints {
+			m.current = screenMenu
+		} else {
+			m.current = screenEndpoints
+			m.endpointList = endpoints.NewListModel(m.endpointSvc)
+		}
+		return m, nil
+
+	case endpoints.FormSubmittedMsg:
+		m.current = screenEndpoints
+		m.endpointList = endpoints.NewListModel(m.endpointSvc)
+		return m, nil
+
+	case daemon.BackMsg:
+		m.current = screenMenu
+		return m, nil
+
+	case dashboard.BackMsg:
+		m.current = screenMenu
+		return m, nil
+
+	case settings.BackMsg, settings.SavedMsg:
+		m.current = screenMenu
+		return m, nil
+	}
+
+	// Route to the active screen.
 	switch m.current {
 	case screenMenu:
-		return m.updateMenu(msg)
+		newMenu, cmd := m.menu.Update(msg)
+		m.menu = newMenu
+		return m, cmd
 	case screenEndpoints:
-		return m.updateEndpointList(msg)
+		newList, cmd := m.endpointList.Update(msg)
+		m.endpointList = newList
+		return m, cmd
 	case screenEndpointForm:
-		return m.updateEndpointForm(msg)
+		newForm, cmd := m.endpointForm.Update(msg)
+		m.endpointForm = newForm
+		return m, cmd
 	case screenEndpointConfirm:
-		return m.updateEndpointConfirm(msg)
+		newConfirm, cmd := m.endpointConfirm.Update(msg)
+		m.endpointConfirm = newConfirm
+		return m, cmd
 	case screenDaemon:
-		return m.updateDaemon(msg)
+		newDaemon, cmd := m.daemonView.Update(msg)
+		m.daemonView = newDaemon
+		return m, cmd
 	case screenDashboard:
-		return m.updateDashboard(msg)
+		newDash, cmd := m.dashboardView.Update(msg)
+		m.dashboardView = newDash
+		return m, cmd
 	case screenSettings:
-		return m.updateSettings(msg)
+		newSettings, cmd := m.settingsView.Update(msg)
+		m.settingsView = newSettings
+		return m, cmd
 	}
 	return m, nil
 }
@@ -118,123 +176,18 @@ func (m AppModel) View() string {
 	return ""
 }
 
-// --- Screen update helpers ---
-
-func (m AppModel) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newMenu, cmd := m.menu.Update(msg)
-	m.menu = newMenu
-
-	if nav, ok := asMsg[menu.NavigateTo](cmd); ok {
-		switch nav.Screen {
-		case "Endpoints":
-			m.current = screenEndpoints
-			m.endpointList = endpoints.NewListModel(m.endpointSvc)
-		case "Daemon":
-			m.current = screenDaemon
-		case "Dashboard":
-			m.current = screenDashboard
-			return m, m.dashboardView.Init()
-		case "Settings":
-			m.current = screenSettings
-		}
-		return m, nil
-	}
-	return m, cmd
-}
-
-func (m AppModel) updateEndpointList(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newList, cmd := m.endpointList.Update(msg)
-	m.endpointList = newList
-
-	if isMsg[endpoints.BackMsg](cmd) {
-		m.current = screenMenu
-		return m, nil
-	}
-	if nav, ok := asMsg[endpoints.ShowFormMsg](cmd); ok {
-		m.endpointForm = endpoints.NewFormModel(m.endpointSvc, nav.Endpoint)
-		m.current = screenEndpointForm
-		return m, m.endpointForm.Init()
-	}
-	if nav, ok := asMsg[endpoints.ShowConfirmMsg](cmd); ok {
-		m.endpointConfirm = endpoints.NewConfirmModel(m.endpointSvc, nav.Endpoint)
-		m.current = screenEndpointConfirm
-		return m, nil
-	}
-
-	return m, cmd
-}
-
-func (m AppModel) updateEndpointForm(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newForm, cmd := m.endpointForm.Update(msg)
-	m.endpointForm = newForm
-
-	if isMsg[endpoints.BackMsg](cmd) || isMsg[endpoints.FormSubmittedMsg](cmd) {
+func (m AppModel) handleMenuNav(screen string) (tea.Model, tea.Cmd) {
+	switch screen {
+	case "Endpoints":
 		m.current = screenEndpoints
 		m.endpointList = endpoints.NewListModel(m.endpointSvc)
-		return m, nil
+	case "Daemon":
+		m.current = screenDaemon
+	case "Dashboard":
+		m.current = screenDashboard
+		return m, m.dashboardView.Init()
+	case "Settings":
+		m.current = screenSettings
 	}
-	return m, cmd
-}
-
-func (m AppModel) updateEndpointConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newConfirm, cmd := m.endpointConfirm.Update(msg)
-	m.endpointConfirm = newConfirm
-
-	if isMsg[endpoints.BackMsg](cmd) || isMsg[endpoints.FormSubmittedMsg](cmd) {
-		m.current = screenEndpoints
-		m.endpointList = endpoints.NewListModel(m.endpointSvc)
-		return m, nil
-	}
-	return m, cmd
-}
-
-func (m AppModel) updateDaemon(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newDaemon, cmd := m.daemonView.Update(msg)
-	m.daemonView = newDaemon
-
-	if isMsg[daemon.BackMsg](cmd) {
-		m.current = screenMenu
-		return m, nil
-	}
-	return m, cmd
-}
-
-func (m AppModel) updateDashboard(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newDash, cmd := m.dashboardView.Update(msg)
-	m.dashboardView = newDash
-
-	if isMsg[dashboard.BackMsg](cmd) {
-		m.current = screenMenu
-		return m, nil
-	}
-	return m, cmd
-}
-
-func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
-	newSettings, cmd := m.settingsView.Update(msg)
-	m.settingsView = newSettings
-
-	if isMsg[settings.BackMsg](cmd) || isMsg[settings.SavedMsg](cmd) {
-		m.current = screenMenu
-		return m, nil
-	}
-	return m, cmd
-}
-
-// --- Message helpers ---
-
-// asMsg attempts to extract a message of type T from a tea.Cmd by executing it.
-func asMsg[T any](cmd tea.Cmd) (T, bool) {
-	var zero T
-	if cmd == nil {
-		return zero, false
-	}
-	msg := cmd()
-	v, ok := msg.(T)
-	return v, ok
-}
-
-func isMsg[T any](cmd tea.Cmd) bool {
-	_, ok := asMsg[T](cmd)
-	return ok
+	return m, nil
 }

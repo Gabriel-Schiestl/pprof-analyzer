@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gabri/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 )
 
 // ProfileCollector collects pprof profiles from a live endpoint.

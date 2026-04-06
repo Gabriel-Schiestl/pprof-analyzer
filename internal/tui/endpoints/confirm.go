@@ -5,9 +5,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/gabri/pprof-analyzer/internal/app"
-	"github.com/gabri/pprof-analyzer/internal/domain"
-	"github.com/gabri/pprof-analyzer/internal/tui/styles"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/app"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/styles"
 )
 
 // ConfirmModel is the deletion confirmation dialog.

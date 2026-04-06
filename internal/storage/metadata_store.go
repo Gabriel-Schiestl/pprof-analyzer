@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/gabri/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 )
 
 // MetadataStore persists CollectionRun state as JSON files under runs/{endpointID}/.

@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/gabri/pprof-analyzer/internal/app"
-	"github.com/gabri/pprof-analyzer/internal/domain"
-	"github.com/gabri/pprof-analyzer/internal/tui/styles"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/app"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/styles"
 )
 
 // --- Navigation messages ---

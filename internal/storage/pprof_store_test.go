@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gabri/pprof-analyzer/internal/domain"
-	"github.com/gabri/pprof-analyzer/internal/storage"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

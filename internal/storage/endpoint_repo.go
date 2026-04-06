@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/gabri/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 )
 
 // EndpointRepository persists endpoints as a JSON file with concurrent-safe access.

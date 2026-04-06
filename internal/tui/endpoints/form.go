@@ -1,28 +1,24 @@
 package endpoints
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/huh"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 
-	"github.com/gabri/pprof-analyzer/internal/app"
-	"github.com/gabri/pprof-analyzer/internal/domain"
-	"github.com/gabri/pprof-analyzer/internal/tui/styles"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/app"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/styles"
 )
 
 // FormSubmittedMsg is sent when the form is successfully submitted.
 type FormSubmittedMsg struct{}
 
-// FormModel is the add/edit endpoint form model.
-type FormModel struct {
-	form     *huh.Form
-	svc      *app.EndpointService
-	editing  *domain.Endpoint
-	errorMsg string
-
-	// form fields
+// formData holds form field values on the heap so that huh's Value() pointers
+// remain stable across Bubble Tea model copies.
+type formData struct {
 	name        string
 	baseURL     string
 	environment string
@@ -33,40 +29,50 @@ type FormModel struct {
 	token       string
 }
 
+// FormModel is the add/edit endpoint form model.
+type FormModel struct {
+	form     *huh.Form
+	svc      *app.EndpointService
+	editing  *domain.Endpoint
+	errorMsg string
+	data     *formData
+}
+
 // NewFormModel creates a form for adding or editing an endpoint.
 // Pass nil for ep to create a new endpoint.
 func NewFormModel(svc *app.EndpointService, ep *domain.Endpoint) FormModel {
-	m := FormModel{svc: svc, editing: ep}
+	data := &formData{}
 
 	if ep != nil {
-		m.name = ep.Name
-		m.baseURL = ep.BaseURL
-		m.environment = string(ep.Environment)
-		m.intervalS = strconv.Itoa(int(ep.CollectInterval.Seconds()))
-		m.authType = string(ep.Credentials.AuthType)
-		m.username = ep.Credentials.Username
-		m.password = ep.Credentials.Password
-		m.token = ep.Credentials.Token
+		data.name = ep.Name
+		data.baseURL = ep.BaseURL
+		data.environment = string(ep.Environment)
+		data.intervalS = strconv.Itoa(int(ep.CollectInterval.Seconds()))
+		data.authType = string(ep.Credentials.AuthType)
+		data.username = ep.Credentials.Username
+		data.password = ep.Credentials.Password
+		data.token = ep.Credentials.Token
 	} else {
-		m.environment = string(domain.EnvDevelopment)
-		m.authType = string(domain.AuthNone)
-		m.intervalS = "300"
+		data.environment = string(domain.EnvDevelopment)
+		data.authType = string(domain.AuthNone)
+		data.intervalS = "300"
 	}
 
-	m.form = buildForm(&m)
+	m := FormModel{svc: svc, editing: ep, data: data}
+	m.form = buildForm(data)
 	return m
 }
 
-func buildForm(m *FormModel) *huh.Form {
+func buildForm(data *formData) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Name").
 				Description("Identifier for the application").
-				Value(&m.name).
+				Value(&data.name).
 				Validate(func(s string) error {
 					if s == "" {
-						return huh.ErrUserAborted
+						return fmt.Errorf("name is required")
 					}
 					return nil
 				}),
@@ -74,7 +80,7 @@ func buildForm(m *FormModel) *huh.Form {
 			huh.NewInput().
 				Title("Base URL").
 				Description("e.g. http://localhost:6060").
-				Value(&m.baseURL),
+				Value(&data.baseURL),
 
 			huh.NewSelect[string]().
 				Title("Environment").
@@ -83,12 +89,12 @@ func buildForm(m *FormModel) *huh.Form {
 					huh.NewOption("staging", string(domain.EnvStaging)),
 					huh.NewOption("production", string(domain.EnvProduction)),
 				).
-				Value(&m.environment),
+				Value(&data.environment),
 
 			huh.NewInput().
 				Title("Collect interval (seconds)").
 				Description("Default: 300").
-				Value(&m.intervalS),
+				Value(&data.intervalS),
 
 			huh.NewSelect[string]().
 				Title("Authentication").
@@ -97,16 +103,16 @@ func buildForm(m *FormModel) *huh.Form {
 					huh.NewOption("Basic Auth", string(domain.AuthBasic)),
 					huh.NewOption("Bearer Token", string(domain.AuthBearerToken)),
 				).
-				Value(&m.authType),
+				Value(&data.authType),
 		),
 		huh.NewGroup(
-			huh.NewInput().Title("Username").Value(&m.username),
-			huh.NewInput().Title("Password").EchoMode(huh.EchoModePassword).Value(&m.password),
-		).WithHideFunc(func() bool { return m.authType != string(domain.AuthBasic) }),
+			huh.NewInput().Title("Username").Value(&data.username),
+			huh.NewInput().Title("Password").EchoMode(huh.EchoModePassword).Value(&data.password),
+		).WithHideFunc(func() bool { return data.authType != string(domain.AuthBasic) }),
 
 		huh.NewGroup(
-			huh.NewInput().Title("Bearer Token").EchoMode(huh.EchoModePassword).Value(&m.token),
-		).WithHideFunc(func() bool { return m.authType != string(domain.AuthBearerToken) }),
+			huh.NewInput().Title("Bearer Token").EchoMode(huh.EchoModePassword).Value(&data.token),
+		).WithHideFunc(func() bool { return data.authType != string(domain.AuthBearerToken) }),
 	)
 }
 
@@ -130,9 +136,10 @@ func (m FormModel) Update(msg tea.Msg) (FormModel, tea.Cmd) {
 	if m.form.State == huh.StateCompleted {
 		if err := m.submit(); err != nil {
 			m.errorMsg = err.Error()
-		} else {
-			return m, func() tea.Msg { return FormSubmittedMsg{} }
+			m.form = buildForm(m.data)
+			return m, m.form.Init()
 		}
+		return m, func() tea.Msg { return FormSubmittedMsg{} }
 	}
 	if m.form.State == huh.StateAborted {
 		return m, func() tea.Msg { return BackMsg{} }
@@ -156,21 +163,21 @@ func (m FormModel) View() string {
 }
 
 func (m *FormModel) submit() error {
-	intervalS, _ := strconv.Atoi(m.intervalS)
+	intervalS, _ := strconv.Atoi(m.data.intervalS)
 	if intervalS <= 0 {
 		intervalS = 300
 	}
 
 	ep := domain.Endpoint{
-		Name:            m.name,
-		BaseURL:         m.baseURL,
-		Environment:     domain.Environment(m.environment),
+		Name:            m.data.name,
+		BaseURL:         m.data.baseURL,
+		Environment:     domain.Environment(m.data.environment),
 		CollectInterval: time.Duration(intervalS) * time.Second,
 		Credentials: domain.Credentials{
-			AuthType: domain.AuthType(m.authType),
-			Username: m.username,
-			Password: m.password,
-			Token:    m.token,
+			AuthType: domain.AuthType(m.data.authType),
+			Username: m.data.username,
+			Password: m.data.password,
+			Token:    m.data.token,
 		},
 	}
 

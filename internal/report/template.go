@@ -1,6 +1,6 @@
 package report
 
-import "github.com/gabri/pprof-analyzer/internal/domain"
+import "github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 
 // Layout constants for the PDF template.
 const (

@@ -1,6 +1,6 @@
 package ollama
 
-import "github.com/gabri/pprof-analyzer/internal/domain"
+import "github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 
 // systemPrompts maps each profile type to a specialized system prompt.
 var systemPrompts = map[domain.ProfileType]string{

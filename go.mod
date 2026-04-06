@@ -1,4 +1,4 @@
-module github.com/gabri/pprof-analyzer
+module github.com/Gabriel-Schiestl/pprof-analyzer
 
 go 1.26.1
 

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gabri/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 )
 
 const (

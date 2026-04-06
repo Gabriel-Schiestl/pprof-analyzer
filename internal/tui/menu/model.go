@@ -5,7 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/gabri/pprof-analyzer/internal/tui/styles"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui/styles"
 )
 
 // NavigateTo is the message emitted when the user selects a menu item.

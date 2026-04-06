@@ -11,13 +11,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/gabri/pprof-analyzer/internal/ai/ollama"
-	"github.com/gabri/pprof-analyzer/internal/app"
-	"github.com/gabri/pprof-analyzer/internal/collector"
-	"github.com/gabri/pprof-analyzer/internal/config"
-	"github.com/gabri/pprof-analyzer/internal/report"
-	"github.com/gabri/pprof-analyzer/internal/storage"
-	"github.com/gabri/pprof-analyzer/internal/tui"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/ai/ollama"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/app"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/collector"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/config"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/report"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/storage"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/tui"
 )
 
 const version = "0.1.0"

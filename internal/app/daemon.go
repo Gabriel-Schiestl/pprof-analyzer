@@ -12,8 +12,8 @@ import (
 
 	"github.com/oklog/run"
 
-	"github.com/gabri/pprof-analyzer/internal/daemon"
-	"github.com/gabri/pprof-analyzer/internal/domain"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/daemon"
+	"github.com/Gabriel-Schiestl/pprof-analyzer/internal/domain"
 )
 
 // DaemonService manages the background collection daemon process.
@@ -112,7 +112,6 @@ func (d *DaemonService) RunInProcess(ctx context.Context) error {
 	var g run.Group
 
 	for _, ep := range endpoints {
-		ep := ep
 		epCtx, cancel := context.WithCancel(ctx)
 		g.Add(
 			func() error { return d.runEndpointLoop(epCtx, ep) },
